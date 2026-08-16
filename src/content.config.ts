@@ -1,29 +1,25 @@
+// src/content.config.ts
 import { defineCollection, z } from 'astro:content';
-
-const projects = defineCollection({
-  type: 'content',
-  schema: z.object({
-    title: z.string(),
-    subtitle: z.string(),
-    category: z.enum(['Architecture', 'AI']),
-    client: z.string().optional(),
-    repoUrl: z.string().url().optional(),
-    tech: z.array(z.string()),
-    order: z.number().optional(), // We'll use this to control layout order safely
-  }),
-});
+import { glob } from 'astro/loaders';
 
 const experience = defineCollection({
-  type: 'content',
+  loader: glob({ pattern: '**/[^_]*.{md,mdx}', base: './src/content/experience' }),
   schema: z.object({
-    title: z.string(),
+    role: z.string(),
     company: z.string(),
     location: z.string(),
-    startDate: z.string(),
-    endDate: z.string(),
-    current: z.boolean(),
-    tech: z.array(z.string()),
+    period: z.string(),
+    tech: z.array(z.string()).optional(),
   }),
 });
 
-export const collections = { projects, experience };
+const projects = defineCollection({
+  loader: glob({ pattern: '**/[^_]*.{md,mdx}', base: './src/content/projects' }),
+  schema: z.object({
+    title: z.string(),
+    category: z.enum(['Architecture', 'AI']),
+    summary: z.string(),
+  }),
+});
+
+export const collections = { experience, projects };
