@@ -3,20 +3,35 @@ import { getCollection, render } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
 import AIAssistant from '../components/AIAssistant.vue';
 
-// 1. Fetch data from modern collections
+// 1. Fetch data from content collections
 const rawExperience = await getCollection('experience');
 const rawProjects = await getCollection('projects');
 
-// 2. Sort chronologically (Current jobs first, then by date logic)
+// 2. Sort experience safely (Current jobs first, then by date fallback)
 const sortedExperience = rawExperience.sort((a, b) => {
-  if (a.data.current !== b.data.current) return a.data.current ? -1 : 1;
-  return b.data.startDate.localeCompare(a.data.startDate);
+  const aCurrent = a.data.current ?? (a.data.period?.includes('Current') || a.data.period?.includes('Present')) ?? false;
+  const bCurrent = b.data.current ?? (b.data.period?.includes('Current') || b.data.period?.includes('Present')) ?? false;
+
+  if (aCurrent !== bCurrent) return aCurrent ? -1 : 1;
+
+  const aDate = a.data.startDate ?? a.data.period ?? '';
+  const bDate = b.data.startDate ?? b.data.period ?? '';
+  return bDate.localeCompare(aDate);
 });
 
-// 3. Sort projects by your explicit order frontmatter
-const sortedProjects = rawProjects.sort((a, b) => (a.data.order ?? 99) - (b.data.order ?? 99));
+// 3. Sort projects safely by explicit order or title fallback
+const sortedProjects = rawProjects.sort((a, b) => {
+  const aOrder = a.data.order ?? 99;
+  const bOrder = b.data.order ?? 99;
 
-// Pre-render content to keep template code simple and clean
+  if (aOrder !== bOrder) return aOrder - bOrder;
+
+  const aTitle = a.data.title ?? '';
+  const bTitle = b.data.title ?? '';
+  return aTitle.localeCompare(bTitle);
+});
+
+// Pre-render content
 const processedExperience = await Promise.all(
   sortedExperience.map(async (exp) => {
     const { Content } = await render(exp);
@@ -50,7 +65,6 @@ const processedProjects = await Promise.all(
         <h2 class="text-2xl font-bold tracking-tight text-white">Interactive Résumé Brain</h2>
         <p class="text-slate-400 text-sm mt-1">Powered by LlamaIndex, Qdrant Cloud, and Google Cloud Run</p>
       </div>
-      <!-- Drop the component with dynamic execution enabled -->
       <AIAssistant client:load />
     </section>
 
@@ -63,27 +77,37 @@ const processedProjects = await Promise.all(
       <div class="space-y-12 border-l border-slate-800 pl-6 ml-2">
         {processedExperience.map((exp) => {
           const Content = exp.Content;
+          const isCurrent = exp.data.current ?? (exp.data.period?.includes('Current') || exp.data.period?.includes('Present'));
+          const displayTitle = exp.data.title ?? exp.data.role ?? 'Solution Architect';
+          const displayDates = exp.data.period ?? `${exp.data.startDate ?? ''} — ${isCurrent ? 'Present' : exp.data.endDate ?? ''}`;
+
           return (
             <div class="relative space-y-3">
-              {/* Timeline Dot Indicator */}
-              <div class={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-4 border-slate-900 ${exp.data.current ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-slate-700'}`}></div>
+              <!-- Timeline Dot Indicator -->
+              <div class={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-4 border-slate-900 ${isCurrent ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-slate-700'}`}></div>
               
               <div class="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
-                <h3 class="text-xl font-semibold text-white">{exp.data.title}</h3>
-                <span class="text-sm font-medium text-slate-400 tabular-nums">{exp.data.startDate} — {exp.data.current ? 'Present' : exp.data.endDate}</span>
+                <h3 class="text-xl font-semibold text-white">{displayTitle}</h3>
+                <span class="text-sm font-medium text-slate-400 tabular-nums">{displayDates}</span>
               </div>
               
-              <div class="text-base text-emerald-300/90 font-medium">{exp.data.company} • <span class="text-slate-400 font-normal">{exp.data.location}</span></div>
+              <div class="text-base text-emerald-300/90 font-medium">
+                {exp.data.company} • <span class="text-slate-400 font-normal">{exp.data.location}</span>
+              </div>
               
               <div class="prose prose-invert prose-slate max-w-none text-slate-300 text-sm leading-relaxed space-y-2">
                 <Content />
               </div>
 
-              <div class="flex flex-wrap gap-1.5 pt-2">
-                {exp.data.tech.map((tech) => (
-                  <span class="px-2.5 py-0.5 text-xs font-medium rounded-md bg-slate-800 border border-slate-700/60 text-slate-300">{tech}</span>
-                ))}
-              </div>
+              {(exp.data.tech && exp.data.tech.length > 0) && (
+                <div class="flex flex-wrap gap-1.5 pt-2">
+                  {exp.data.tech.map((techItem: string) => (
+                    <span class="px-2.5 py-0.5 text-xs font-medium rounded-md bg-slate-800 border border-slate-700/60 text-slate-300">
+                      {techItem}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -100,13 +124,15 @@ const processedProjects = await Promise.all(
         {processedProjects.map((project) => {
           const Content = project.Content;
           const isAI = project.data.category === 'AI';
+          const subtitle = project.data.subtitle ?? project.data.summary ?? '';
+
           return (
             <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-6 flex flex-col justify-between hover:border-slate-700 transition duration-200">
               <div class="space-y-4">
                 <div class="flex items-start justify-between gap-4">
                   <div>
                     <h3 class="text-lg font-bold text-white tracking-tight">{project.data.title}</h3>
-                    <p class="text-xs text-slate-400 font-medium mt-0.5">{project.data.subtitle}</p>
+                    {subtitle && <p class="text-xs text-slate-400 font-medium mt-0.5">{subtitle}</p>}
                   </div>
                   <span class={`text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md ${isAI ? 'bg-blue-950 text-blue-300 border border-blue-800/60' : 'bg-amber-950 text-amber-300 border border-amber-800/60'}`}>
                     {project.data.category}
@@ -119,11 +145,15 @@ const processedProjects = await Promise.all(
               </div>
 
               <div class="mt-6 pt-4 border-t border-slate-900 space-y-3">
-                <div class="flex flex-wrap gap-1.5">
-                  {project.data.tech.map((tech) => (
-                    <span class="px-2 py-0.5 text-[10px] font-medium rounded bg-slate-900 border border-slate-800 text-slate-400">{tech}</span>
-                  ))}
-                </div>
+                {(project.data.tech && project.data.tech.length > 0) && (
+                  <div class="flex flex-wrap gap-1.5">
+                    {project.data.tech.map((techItem: string) => (
+                      <span class="px-2 py-0.5 text-[10px] font-medium rounded bg-slate-900 border border-slate-800 text-slate-400">
+                        {techItem}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {project.data.repoUrl && (
                   <div class="pt-1">
@@ -140,38 +170,38 @@ const processedProjects = await Promise.all(
       </div>
     </section>
 
-	<!-- EDUCATION & CERTIFICATIONS SECTION -->
-<section class="space-y-6">
-  <h2 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-    <span class="w-2 h-6 bg-purple-500 rounded-sm"></span> Education &amp; Certifications
-  </h2>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    
-    <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
-      <h3 class="text-base font-semibold text-white">Higher Diploma in Business (Level 8)</h3>
-      <p class="text-xs text-purple-400 font-medium">Regulatory Risk &amp; Compliance / DORA Compliance</p>
-      <p class="text-xs text-slate-400">TU Dublin / PAT • Mar 2024 – Dec 2024</p>
-    </div>
+    <!-- EDUCATION & CERTIFICATIONS SECTION -->
+    <section class="space-y-6">
+      <h2 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+        <span class="w-2 h-6 bg-purple-500 rounded-sm"></span> Education &amp; Certifications
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
+          <h3 class="text-base font-semibold text-white">Higher Diploma in Business (Level 8)</h3>
+          <p class="text-xs text-purple-400 font-medium">Regulatory Risk &amp; Compliance / DORA Compliance</p>
+          <p class="text-xs text-slate-400">TU Dublin / PAT • Mar 2024 – Dec 2024</p>
+        </div>
 
-    <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
-      <h3 class="text-base font-semibold text-white">CCSP &amp; TOGAF 9 Foundation</h3>
-      <p class="text-xs text-purple-400 font-medium">Certified Cloud Security Professional &amp; TOGAF 9</p>
-      <p class="text-xs text-slate-400">Certified 2021</p>
-    </div>
+        <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
+          <h3 class="text-base font-semibold text-white">CCSP &amp; TOGAF 9 Foundation</h3>
+          <p class="text-xs text-purple-400 font-medium">Certified Cloud Security Professional &amp; TOGAF 9</p>
+          <p class="text-xs text-slate-400">Certified 2021</p>
+        </div>
 
-    <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
-      <h3 class="text-base font-semibold text-white">BSc (Hons) Software Development</h3>
-      <p class="text-xs text-slate-400">Cork IT • Graduated 2007</p>
-    </div>
+        <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
+          <h3 class="text-base font-semibold text-white">BSc (Hons) Software Development</h3>
+          <p class="text-xs text-slate-400">Cork IT • Graduated 2007</p>
+        </div>
 
-    <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
-      <h3 class="text-base font-semibold text-white">MSc by Research (Application)</h3>
-      <p class="text-xs text-purple-400 font-medium">Cybersecurity Focus</p>
-      <p class="text-xs text-slate-400">Research Interest: Regulation outpacing verifiable technical controls</p>
-    </div>
+        <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
+          <h3 class="text-base font-semibold text-white">MSc by Research (Application)</h3>
+          <p class="text-xs text-purple-400 font-medium">Cybersecurity Focus</p>
+          <p class="text-xs text-slate-400">Research Interest: Regulation outpacing verifiable technical controls</p>
+        </div>
 
-  </div>
-</section>
+      </div>
+    </section>
 
   </main>
 </Layout>
