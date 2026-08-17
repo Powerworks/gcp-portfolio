@@ -1,4 +1,5 @@
 ---
+order: 7
 role: "IT Project Manager"
 company: "University of Sharjah"
 location: "Sharjah, UAE"

@@ -1,5 +1,6 @@
 ---
-title: "Cratis Build Kit"
+order: 3
+title: "Cratis Build Reference App"
 subtitle: "Event sourcing reference kit"
 category: "Architecture"
 summary: "A streamlined expense tracking system built with Cratis."

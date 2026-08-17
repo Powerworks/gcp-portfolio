@@ -1,4 +1,5 @@
 ---
+order: 2
 role: "Solution Specialist"
 company: "Irish Life"
 location: "Dublin, Ireland"

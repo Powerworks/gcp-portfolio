@@ -1,51 +1,44 @@
-# Portfolio RAG Backend - Post-Mortem & Architecture Learnings
+Gotchas from building and deploying a FastAPI + LlamaIndex + Qdrant RAG backend to Google Cloud Run, integrated with a static frontend.
 
-This document logs the critical environment, dependency, and infrastructure gaps encountered during setup to ensure zero friction on future deployments.
+1. Ingestion vs. execution share a dependency, not just a data contract
 
----
+The query engine (app/engine.py) only reads from Qdrant, but it still has to embed the incoming prompt with the same model the ingestion script (ingest.py) used to build the index. Skip llama-index-embeddings-openai / llama-index-llms-openai in the runtime environment and LlamaIndex fails silently on startup — surfaces later as a generic 500.
 
-## 1. The RAG Split: Ingestion vs. Execution
-A common trap is assuming that because the backend engine doesn't build the index, it doesn't need the builder's tools. 
+2. Don't fight the host runtime
 
-* **The Reality:** The data pipeline is split into a **Writer** (`ingest.py`) and a **Reader** (`app/engine.py`). 
-* **The Learning:** Even though the Reader *only queries* an existing Qdrant collection, it still must transform the incoming text prompt into a vector using the exact same mathematical model the writer used. 
-* **The Fix:** Both environments must explicitly package `llama-index-embeddings-openai` and `llama-index-llms-openai`. If either is missing, LlamaIndex fails implicitly on startup, leading to generic `500 Internal Server Error` responses.
+Developing on a host with a bleeding-edge/unsupported Python (e.g. pre-release 3.14 on Fedora) breaks C-extension deps like pandas/pydantic. Rather than patching headers, isolate ingestion in a pinned container:
 
----
+bash
+docker run -it --rm -v "$(pwd)":/app -w /app \
+  -e QDRANT_URL=... -e QDRANT_API_KEY=... -e OPENAI_API_KEY=... \
+  python:3.11-slim sh -c "pip install -r requirements.txt llama-index-readers-file llama-index-embeddings-openai && python ingest.py"
+3. New GCP projects cripple the default service account by design
 
-## 2. Host Isolation (Bypass the Bleeding Edge)
-When developing on host systems with experimental runtimes (e.g., Fedora running pre-release Python 3.14), Python typing and underlying C-extensions (like `pandas` or `pydantic v1` internals) will systematically break.
+gcloud run deploy --source . fails at the build step on fresh projects until the default compute SA ({PROJECT_NUMBER}-compute@developer.gserviceaccount.com) has roles/cloudbuild.builds.builder and roles/storage.objectViewer bound explicitly.
 
-* **The Learning:** Do not waste hours trying to compile system headers (`Python.h`) or debug upstream framework code on an unsupported host runtime.
-* **The Fix:** Immediately isolate local scripts (like ingestion) using a production-stable container runtime mapped to your working directory:
-  ```bash
-  docker run -it --rm \
-    -v "$(pwd)":/app -w /app \
-    -e QDRANT_URL="..." -e QDRANT_API_KEY="..." -e OPENAI_API_KEY="..." \
-    python:3.11-slim \
-    sh -c "pip install -r requirements.txt llama-index-readers-file llama-index-embeddings-openai && python ingest.py"
+4. Keep the raw corpus out of the deployed service
 
+SimpleDirectoryReader("data", recursive=True) belongs to the ingestion phase only. Production reads exclusively via the Qdrant connection string — the data/ folder never ships in the container image.
 
-3. Google Cloud Platform (GCP) Secure-by-Default Traps
-On any newly provisioned GCP Project (like axiomatic-spark-505611-t0), Google's updated security postures intentionally cripple the default Service Accounts to prevent supply-chain vulnerabilities.
+5. Cloud Run is private by default
 
-The Learning: Direct source deployments (gcloud run deploy --source .) will consistently fail at the "Building Container" phase on fresh projects until the infrastructure service account is explicitly unshackled.
+A 403 from curl is Google's IAM layer, not your app. Fix with roles/run.invoker for allUsers, and pass --allow-unauthenticated in CI/CD every deploy — otherwise it silently reverts. If org policy blocks allUsers (constraints/iam.allowedPolicyMemberDomains), you have to enable unauthenticated invocations manually in the console.
 
-The Fix: Before building, ensure the project's default compute service account ({PROJECT_NUMBER}-compute@developer.gserviceaccount.com) is manually bound to these strict IAM roles:
+6. Diagnose by error shape, not just status code
+Error	Body	Meaning
+403	HTML	Cloud Run IAM blocked it before your container ran
+404	{"detail": "Not Found"}	Reached FastAPI, route doesn't exist — check /docs
+500	{"detail": "..."}	Reached your code, uncaught exception (missing key, DB failure)
+7. Qdrant client hangs on Cloud Run without explicit config
 
-Bash
-# Grant Cloud Build orchestration management
-gcloud projects add-iam-policy-binding [PROJECT_ID] \
-    --member="serviceAccount:[PROJECT_NUMBER]-compute@developer.gserviceaccount.com" \
-    --role="roles/cloudbuild.builds.builder"
+The client's automatic version-compatibility check can time out in serverless environments:
 
-# Grant access to pull the uploaded source zip from Cloud Storage
-gcloud projects add-iam-policy-binding [PROJECT_ID] \
-    --member="serviceAccount:[PROJECT_NUMBER]-compute@developer.gserviceaccount.com" \
-    --role="roles/storage.objectViewer"
-4. Source Directory Structure Constraints
-When configuring directory readers for unstructured text ingestion:
+python
+client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key,
+                       check_compatibility=False, timeout=10.0)
 
-SimpleDirectoryReader("data", recursive=True) effortlessly handles complex folder mapping (data/experience/, data/projects/).
+Also assert required env vars (OPENAI_API_KEY, QDRANT_URL, QDRANT_API_KEY) at startup so failures name the missing variable in logs instead of surfacing as a generic pipeline error.
 
-The Catch: This recursion must happen during the Ingestion phase (ingest.py). The production API context should remain entirely decoupled from the raw data/ folder, relying solely on the remote vector database connection strings.
+8. Test in this order
+
+/docs (routing/schema) → curl (raw HTTP) → frontend integration (hostname mismatches are a frequent last-mile bug).

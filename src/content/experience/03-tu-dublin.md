@@ -1,4 +1,5 @@
 ---
+order: 3
 role: "Application Developer"
 company: "TU Dublin"
 location: "Grangegorman, Dublin, Ireland"

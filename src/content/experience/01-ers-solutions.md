@@ -1,4 +1,5 @@
 ---
+order: 1
 role: "Solution Architect"
 company: "ERS Solutions"
 location: "Dublin, Ireland"

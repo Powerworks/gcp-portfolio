@@ -1,4 +1,5 @@
 ---
+order: 8
 role: "Technical Specialist & Team Leader"
 company: "Exan Group"
 location: "Coquitlam, Vancouver, Canada"

@@ -1,4 +1,5 @@
 ---
+order: 1
 title: "AgentOS"
 subtitle: "Personal agent control plane"
 category: "AI"

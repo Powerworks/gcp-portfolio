@@ -1,4 +1,5 @@
 ---
+order: 5
 role: "Interim Operations Manager"
 company: "Memits LLC"
 location: "Dubai, UAE"

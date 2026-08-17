@@ -1,4 +1,5 @@
 ---
+order: 6
 role: "IT Manager"
 company: "UpandRunning Dubai"
 location: "Dubai, UAE"

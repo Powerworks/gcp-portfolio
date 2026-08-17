@@ -1,4 +1,5 @@
 ---
+order: 2
 title: "Broker Connect"
 subtitle: "Event-Driven Integration Broker"
 category: "Architecture"

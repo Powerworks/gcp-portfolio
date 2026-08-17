@@ -1,4 +1,5 @@
 ---
+order: 4
 role: "Lead Software Architect"
 company: "B3 Digital Solutions"
 location: "Dubai Silicon Oasis, UAE"
