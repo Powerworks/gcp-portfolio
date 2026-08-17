@@ -1,6 +1,6 @@
 import os
 from qdrant_client import QdrantClient
-from llama_index.core import VectorStoreIndex, StorageContext
+from llama_index.core import VectorStoreIndex
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.llms.openai import OpenAI
 
@@ -14,7 +14,22 @@ class RAGEngine:
             qdrant_api_key = os.getenv("QDRANT_API_KEY")
             openai_api_key = os.getenv("OPENAI_API_KEY")
 
-            client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key)
+            # Early validation to catch missing env vars immediately in logs
+            missing_vars = []
+            if not qdrant_url: missing_vars.append("QDRANT_URL")
+            if not qdrant_api_key: missing_vars.append("QDRANT_API_KEY")
+            if not openai_api_key: missing_vars.append("OPENAI_API_KEY")
+
+            if missing_vars:
+                raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
+            client = QdrantClient(
+                url=qdrant_url, 
+                api_key=qdrant_api_key,
+                check_compatibility=False,  # Bypasses the version check warning/hang
+                timeout=10.0
+            )
+            
             vector_store = QdrantVectorStore(client=client, collection_name="portfolio-corpus")
             llm = OpenAI(model="gpt-4o-mini", temperature=0.1, api_key=openai_api_key)
 
