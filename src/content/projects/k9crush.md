@@ -2,7 +2,7 @@
 order: 3
 title: "K9 Crush"
 subtitle: "Dog Agility Platform"
-category: "Web App"
+category: "Architecture"
 summary: "Platform for managing dog agility events: live scoring and updates."
 tech: ["Vue.js", "Firebase", "Tailwind"]
 ---
