@@ -63,7 +63,8 @@ interface Message {
   text: string;
 }
 
-const CLOUD_RUN_URL = 'https://rag-backend-489381507990.europe-west1.run.app/api/v1/query';
+// With this:
+const CLOUD_RUN_URL = 'https://portfolio-rag-backend-489381507990.europe-west1.run.app/api/v1/query';
 
 const messages = ref<Message[]>([
   { role: 'assistant', text: "Hello! I'm William's background assistant. Ask me anything about his cloud architecture, Java systems, or platform engineering experience." }
