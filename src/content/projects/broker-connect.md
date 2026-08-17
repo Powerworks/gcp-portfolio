@@ -3,7 +3,6 @@ order: 2
 title: "Broker Connect"
 subtitle: "Event-Driven Integration Broker"
 category: "Architecture"
-order: 1
 summary: "Broker for trading."
 tech: ["Java", "Spring Boot", "Docker", "Kubernetes"]
 repoUrl: "https://github.com/yourusername/broker-connect"
