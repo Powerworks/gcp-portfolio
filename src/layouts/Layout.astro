@@ -2,22 +2,47 @@
 import '../styles/global.css';
 
 interface Props {
-  title: string;
+  title?: string;
+  description?: string;
 }
 
-const { title } = Astro.props;
+const {
+  title = "William Power | Solution Architect",
+  description = "Portfolio and enterprise AI RAG demonstration by William Power, Solution Architect specializing in event-driven systems and AI integration patterns."
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://axiomatic-spark-505611-t0.web.app');
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark scroll-smooth">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
+
+    <!-- Primary Meta Tags -->
     <title>{title}</title>
+    <meta name="title" content={title} />
+    <meta name="description" content={description} />
+    <meta name="author" content="William Power" />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- OpenGraph / Social Cards -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:site_name" content="William Power Portfolio" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={canonicalURL} />
+    <meta property="twitter:title" content={title} />
+    <meta property="twitter:description" content={description} />
   </head>
-  <body class="bg-slate-900 text-slate-100 antialiased font-sans min-h-screen">
+  <body class="bg-slate-900 text-slate-100 antialiased font-sans min-h-screen selection:bg-emerald-500 selection:text-slate-950">
     <!-- The <slot /> is where your page content (index.astro) gets injected -->
     <slot />
   </body>
