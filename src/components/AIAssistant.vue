@@ -1,7 +1,7 @@
 <template>
   <div class="w-full max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden flex flex-col h-[500px]">
     <!-- Header -->
-    <div class="px-6 py-4 bg-slate-850 border-b border-slate-800 flex items-center justify-between">
+    <div class="px-6 py-4 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
         <h3 class="text-sm font-semibold text-slate-200 tracking-wide uppercase">
@@ -36,7 +36,7 @@
     </div>
 
     <!-- Input Form -->
-    <form @submit.prevent="sendMessage" class="p-4 bg-slate-850 border-t border-slate-800 flex items-center space-x-3">
+    <form @submit.prevent="sendMessage" class="p-4 bg-slate-900/80 border-t border-slate-800 flex items-center space-x-3">
       <input
         v-model="inputMessage"
         type="text"
@@ -63,9 +63,6 @@ interface Message {
   text: string;
 }
 
-// With this:
-const CLOUD_RUN_URL = 'https://portfolio-rag-backend-489381507990.europe-west1.run.app/api/v1/query';
-
 const messages = ref<Message[]>([
   { role: 'assistant', text: "Hello! I'm William's background assistant. Ask me anything about his cloud architecture, Java systems, or platform engineering experience." }
 ]);
@@ -90,7 +87,8 @@ const sendMessage = async () => {
   await scrollToBottom();
 
   try {
-    const response = await fetch(CLOUD_RUN_URL, {
+    // Route request through the local Astro same-origin API proxy endpoint
+    const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt })

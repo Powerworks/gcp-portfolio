@@ -7,22 +7,38 @@ import AIAssistant from '../components/AIAssistant.vue';
 const rawExperience = await getCollection('experience');
 const rawProjects = await getCollection('projects');
 
-// 2. Sort experience safely (Current jobs first, then by date fallback)
+// Helper to convert date strings like "Mar 2024" or "2024-03" into numbers for sorting
+const parseDate = (dateStr?: string) => {
+  if (!dateStr) return 0;
+  const timestamp = Date.parse(dateStr);
+  if (!isNaN(timestamp)) return timestamp;
+  
+  // Fallback for "Month Year" formats (e.g. "Mar 2024")
+  const parts = dateStr.trim().split(' ');
+  if (parts.length === 2) {
+    const year = parseInt(parts[1], 10);
+    return isNaN(year) ? 0 : year;
+  }
+  return 0;
+};
+
+// 2. Sort experience chronologically (Current first, then newest date)
 const sortedExperience = rawExperience.sort((a, b) => {
   const aCurrent = a.data.current ?? (a.data.period?.includes('Current') || a.data.period?.includes('Present')) ?? false;
   const bCurrent = b.data.current ?? (b.data.period?.includes('Current') || b.data.period?.includes('Present')) ?? false;
 
   if (aCurrent !== bCurrent) return aCurrent ? -1 : 1;
 
-  const aDate = a.data.startDate ?? a.data.period ?? '';
-  const bDate = b.data.startDate ?? b.data.period ?? '';
-  return bDate.localeCompare(aDate);
+  const aTime = parseDate(a.data.startDate ?? a.data.period);
+  const bTime = parseDate(b.data.startDate ?? b.data.period);
+
+  return bTime - aTime; // Newest dates first
 });
 
-// 3. Sort projects safely by explicit order or title fallback
+// 3. Sort projects by explicit numeric order (1, 2, 3...)
 const sortedProjects = rawProjects.sort((a, b) => {
-  const aOrder = a.data.order ?? 99;
-  const bOrder = b.data.order ?? 99;
+  const aOrder = a.data.order !== undefined ? Number(a.data.order) : 99;
+  const bOrder = b.data.order !== undefined ? Number(b.data.order) : 99;
 
   if (aOrder !== bOrder) return aOrder - bOrder;
 
@@ -46,192 +62,3 @@ const processedProjects = await Promise.all(
   })
 );
 ---
-
-<Layout title="William Power | Solution Architect & AI Portfolio">
-  <main class="max-w-5xl mx-auto px-6 py-16 space-y-20">
-    
-    <!-- HEADER / PROFILE -->
-    <!-- HEADER / PROFILE -->
-    <header class="border-b border-slate-800 pb-8 space-y-4">
-      <div class="space-y-2">
-        <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">William Power</h1>
-        <p class="text-xl text-emerald-400 font-medium">Solution Architect / Systems Engineer</p>
-        <p class="text-slate-400 max-w-2xl text-base leading-relaxed">
-          Specializing in event-driven systems, decoupled modular architectures, and high-fidelity enterprise AI integration patterns.
-        </p>
-      </div>
-
-      <!-- Links to LinkedIn & WordPress -->
-      <div class="flex items-center gap-4 text-sm font-medium pt-2">
-        <a 
-          href="https://www.linkedin.com/in/lpowersolutionarchitect/" 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          class="text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1.5"
-        >
-          <span>LinkedIn Profile</span>
-          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
-            <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
-          </svg>
-        </a>
-        <span class="text-slate-700">•</span>
-        <a 
-          href="https://wpowersite.wordpress.com" 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          class="text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5"
-        >
-          <span>WordPress Blog</span>
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-          </svg>
-        </a>
-      </div>
-    </header>
-
-    <!-- INTERACTIVE AI ASSISTANT SECTION -->
-    <section class="space-y-6">
-      <div class="max-w-3xl mx-auto text-center mb-6">
-        <h2 class="text-2xl font-bold tracking-tight text-white">Interactive Résumé Brain</h2>
-        <p class="text-slate-400 text-sm mt-1">Powered by LlamaIndex, Qdrant Cloud, and Google Cloud Run</p>
-      </div>
-      <AIAssistant client:load />
-    </section>
-
-    <!-- EXPERIENCES TIMELINE SECTION -->
-    <section class="space-y-8">
-      <h2 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-        <span class="w-2 h-6 bg-emerald-500 rounded-sm"></span> Career Timeline
-      </h2>
-      
-      <div class="space-y-12 border-l border-slate-800 pl-6 ml-2">
-        {processedExperience.map((exp) => {
-          const Content = exp.Content;
-          const isCurrent = exp.data.current ?? (exp.data.period?.includes('Current') || exp.data.period?.includes('Present'));
-          const displayTitle = exp.data.title ?? exp.data.role ?? 'Solution Architect';
-          const displayDates = exp.data.period ?? `${exp.data.startDate ?? ''} — ${isCurrent ? 'Present' : exp.data.endDate ?? ''}`;
-
-          return (
-            <div class="relative space-y-3">
-              <!-- Timeline Dot Indicator -->
-              <div class={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-4 border-slate-900 ${isCurrent ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-slate-700'}`}></div>
-              
-              <div class="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
-                <h3 class="text-xl font-semibold text-white">{displayTitle}</h3>
-                <span class="text-sm font-medium text-slate-400 tabular-nums">{displayDates}</span>
-              </div>
-              
-              <div class="text-base text-emerald-300/90 font-medium">
-                {exp.data.company} • <span class="text-slate-400 font-normal">{exp.data.location}</span>
-              </div>
-              
-              <div class="prose prose-invert prose-slate max-w-none text-slate-300 text-sm leading-relaxed space-y-2">
-                <Content />
-              </div>
-
-              {(exp.data.tech && exp.data.tech.length > 0) && (
-                <div class="flex flex-wrap gap-1.5 pt-2">
-                  {exp.data.tech.map((techItem: string) => (
-                    <span class="px-2.5 py-0.5 text-xs font-medium rounded-md bg-slate-800 border border-slate-700/60 text-slate-300">
-                      {techItem}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </section>
-
-    <!-- PROJECTS CASE STUDIES SECTION -->
-    <section class="space-y-8">
-      <h2 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-        <span class="w-2 h-6 bg-blue-500 rounded-sm"></span> Core Architectures & AI Subsystems
-      </h2>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {processedProjects.map((project) => {
-          const Content = project.Content;
-          const isAI = project.data.category === 'AI';
-          const subtitle = project.data.subtitle ?? project.data.summary ?? '';
-
-          return (
-            <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-6 flex flex-col justify-between hover:border-slate-700 transition duration-200">
-              <div class="space-y-4">
-                <div class="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 class="text-lg font-bold text-white tracking-tight">{project.data.title}</h3>
-                    {subtitle && <p class="text-xs text-slate-400 font-medium mt-0.5">{subtitle}</p>}
-                  </div>
-                  <span class={`text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md ${isAI ? 'bg-blue-950 text-blue-300 border border-blue-800/60' : 'bg-amber-950 text-amber-300 border border-amber-800/60'}`}>
-                    {project.data.category}
-                  </span>
-                </div>
-
-                <div class="prose prose-invert max-w-none text-slate-300 text-xs leading-relaxed border-t border-slate-900 pt-3 space-y-2 project-body">
-                  <Content />
-                </div>
-              </div>
-
-              <div class="mt-6 pt-4 border-t border-slate-900 space-y-3">
-                {(project.data.tech && project.data.tech.length > 0) && (
-                  <div class="flex flex-wrap gap-1.5">
-                    {project.data.tech.map((techItem: string) => (
-                      <span class="px-2 py-0.5 text-[10px] font-medium rounded bg-slate-900 border border-slate-800 text-slate-400">
-                        {techItem}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {project.data.repoUrl && (
-                  <div class="pt-1">
-                    <a href={project.data.repoUrl} target="_blank" rel="noopener noreferrer" class="text-xs inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 font-medium">
-                      View Source Repository 
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-
-    <!-- EDUCATION & CERTIFICATIONS SECTION -->
-    <section class="space-y-6">
-      <h2 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-        <span class="w-2 h-6 bg-purple-500 rounded-sm"></span> Education &amp; Certifications
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
-          <h3 class="text-base font-semibold text-white">Higher Diploma in Business (Level 8)</h3>
-          <p class="text-xs text-purple-400 font-medium">Regulatory Risk &amp; Compliance / DORA Compliance</p>
-          <p class="text-xs text-slate-400">TU Dublin / PAT • Mar 2024 – Dec 2024</p>
-        </div>
-
-        <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
-          <h3 class="text-base font-semibold text-white">CCSP &amp; TOGAF 9 Foundation</h3>
-          <p class="text-xs text-purple-400 font-medium">Certified Cloud Security Professional &amp; TOGAF 9</p>
-          <p class="text-xs text-slate-400">Certified 2021</p>
-        </div>
-
-        <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
-          <h3 class="text-base font-semibold text-white">BSc (Hons) Software Development</h3>
-          <p class="text-xs text-slate-400">Cork IT • Graduated 2007</p>
-        </div>
-
-        <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-1.5">
-          <h3 class="text-base font-semibold text-white">MSc by Research (Application)</h3>
-          <p class="text-xs text-purple-400 font-medium">Cybersecurity Focus</p>
-          <p class="text-xs text-slate-400">Research Interest: Regulation outpacing verifiable technical controls</p>
-        </div>
-
-      </div>
-    </section>
-
-  </main>
-</Layout>
