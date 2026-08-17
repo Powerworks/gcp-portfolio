@@ -87,15 +87,15 @@ const sendMessage = async () => {
   await scrollToBottom();
 
   try {
-    // Route request through the local Astro same-origin API proxy endpoint
-    const response = await fetch('/api/chat', {
+    // Directly call the Cloud Run backend API endpoint
+    const response = await fetch('https://rag-backend-489381507990.europe-west1.run.app/api/v1/query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt })
     });
 
     if (response.status === 429) {
-      throw new Error('Rate limit reached (5 requests/hour limit). Please try again later.');
+      throw new Error('Rate limit reached. Please try again later.');
     }
 
     if (!response.ok) {
