@@ -4,7 +4,6 @@ subtitle: "E-Commerce or Platform Subsystem"
 category: "AI" # Or "Backend", depending on how you want to filter it
 order: 2
 tech: ["Vue.js", "Tailwind CSS", "Node.js"]
-summary: "MY PET PROJECT ."
 repoUrl: "https://github.com/yourusername/k9crush" # Optional: remove this line if there's no public repo
 ---
 
@@ -15,7 +14,6 @@ repoUrl: "https://github.com/yourusername/k9crush" # Optional: remove this line 
 * **Decision:** Route same-module event cascades directly through the shared `k9crush.events` RabbitMQ exchange rather than a separate local pub/sub mechanism.
 * **Verification:** Source-verified against Wolverine's transport behavior (default fanout exchange, graceful no-op acknowledgment for modules without a local handler).
 * **Explicit Revisit Trigger:** System performance degradation under high-throughput event cascades or scale constraints requiring modular separation to independent microservices.
-* **Features:** Kanban-style tasks, goals loop, inbox, triggers, cron scheduling, R2 filesystem MCP integration, per-agent least-privilege permissions[cite: 1].
 
 ### Implementation Snippet
 ```csharp

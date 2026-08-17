@@ -55,15 +55,22 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, nextTick } from 'vue';
 
-const messages = ref([
+interface Message {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
+const CLOUD_RUN_URL = 'https://rag-backend-489381507990.europe-west1.run.app/api/v1/query';
+
+const messages = ref<Message[]>([
   { role: 'assistant', text: "Hello! I'm William's background assistant. Ask me anything about his cloud architecture, Java systems, or platform engineering experience." }
 ]);
 const inputMessage = ref('');
 const isLoading = ref(false);
-const chatContainer = ref(null);
+const chatContainer = ref<HTMLDivElement | null>(null);
 
 const scrollToBottom = async () => {
   await nextTick();
@@ -76,33 +83,34 @@ const sendMessage = async () => {
   const prompt = inputMessage.value.trim();
   if (!prompt || isLoading.value) return;
 
-  // Append user message and reset input
   messages.value.push({ role: 'user', text: prompt });
   inputMessage.value = '';
   isLoading.value = true;
   await scrollToBottom();
 
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch(CLOUD_RUN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt })
     });
 
-    const data = await response.json();
-
-    if (response.ok && data.answer) {
-      messages.value.push({ role: 'assistant', text: data.answer });
-    } else {
-      messages.value.push({ 
-        role: 'assistant', 
-        text: `⚠️ Error: ${data.error || 'Failed to process request.'}` 
-      });
+    if (response.status === 429) {
+      throw new Error('Rate limit reached (5 requests/hour limit). Please try again later.');
     }
-  } catch (error) {
+
+    if (!response.ok) {
+      throw new Error(`Server error (${response.status})`);
+    }
+
+    const data = await response.json();
+    const answerText = data.answer || data.response || 'No response returned.';
+
+    messages.value.push({ role: 'assistant', text: answerText });
+  } catch (error: any) {
     messages.value.push({ 
       role: 'assistant', 
-      text: '⚠️ Connection error. Please try again later.' 
+      text: `⚠️ ${error.message || 'Connection error. Please try again later.'}` 
     });
   } finally {
     isLoading.value = false;

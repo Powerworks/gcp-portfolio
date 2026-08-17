@@ -1,8 +1,9 @@
 ---
-role: "Solution Architect"
+title: "Solution Architect"
 company: "ERS Solutions (Placed at Irish Department of Justice)"
 location: "Dublin, Ireland"
-period: "Aug 2024 – Jul 2026"
+startDate: "Aug 2024"
+endDate: "Jul 2026"
 current: true
 tech: [".NET Core", "SQL Server", "RabbitMQ", "Azure Service Bus", "Azure Function Apps", "Azure Container Apps", "Rancher"]
 ---

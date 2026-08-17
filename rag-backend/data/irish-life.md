@@ -1,8 +1,9 @@
 ---
-role: "Solution Specialist"
+title: "Solution Specialist"
 company: "Irish Life"
 location: "Dublin, Ireland"
-period: "Oct 2021 – Aug 2024"
+startDate: "Oct 2021"
+endDate: "Aug 2024"
 current: false
 tech: ["Java", "Spring Boot", "Angular", "Azure Cosmos DB", "AKS", "Jenkins", "WebLogic", "Oracle Service Bus", "Azure DevOps", "Oracle PL/SQL", "Maven"]
 ---
