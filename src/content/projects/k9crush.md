@@ -3,7 +3,6 @@ order: 5
 title: "K9 Crush"
 subtitle: "E-Commerce or Platform Subsystem"
 category: "AI" # Or "Backend", depending on how you want to filter it
-order: 2
 tech: ["Vue.js", "Tailwind CSS", "Node.js"]
 summary: "K9Crush/PawMatch is a shelter-adoption platform (adoption listings) built as a .NET modular monolith — Marten + Wolverine on Postgres/RabbitMQ with a Blazor frontend — where every slice is designed on an event-modeling board first and then codegen'd via Claude Code skills
 repoUrl: "https://github.com/Powerworks/K9DatingApp" # Optional: remove this line if there's no public repo
